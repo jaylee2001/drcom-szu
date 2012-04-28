@@ -30,6 +30,8 @@
 #include "client_daemon.h"
 #include "log.h"
 
+u_int32_t g_challenge;
+
 static void _build_login_packet(struct drcom_login_packet *login_packet, 
 			struct drcom_info *info, struct drcom_host *host, 
 			struct drcom_challenge *challenge)
@@ -56,10 +58,12 @@ static void _build_login_packet(struct drcom_login_packet *login_packet,
 	strncpy(login_packet->username, info->username, 36);
 
 	/* unknown, maybe just a signature? */
-	login_packet->unknown0 = 0x09;
-
+//	login_packet->unknown0 = 0x09;
+	login_packet->unknown0 = 0x00; //Drcom-5.2.0
 	/* mac */
-	login_packet->mac_code = 1;
+//	login_packet->mac_code = 1;
+	login_packet->mac_code = 0x00; //Drcom-5.2.0
+
 	memcpy(login_packet->mac_xor, info->mac, 6);
 	for (i = 0; i < 6; ++i)
 		login_packet->mac_xor[i] ^= login_packet->host_header.checksum[i];
@@ -95,26 +99,43 @@ static void _build_login_packet(struct drcom_login_packet *login_packet,
 	memset(login_packet->zero2, 0, 96);
 
 	/* wtf? */
+	/*
 	login_packet->unknown1 = 0x02;
 	login_packet->unknown2 = 0xc1;
 	login_packet->unknown3[0] = 0x00;
 	login_packet->unknown3[1] = 0x04;
+	*/
+	/*Drcom5.2.0*/
+	login_packet->unknown1 = 0x09;
+	login_packet->unknown2 = 0x00;
+	login_packet->unknown3[0] = 0x00;
+	login_packet->unknown3[1] = 0x06;
+
 
 	/* maybe we should use something random instead? */
 /*
 	memset(login_packet->unknown4, 0, 8);
 */
-	memset(login_packet->unknown4,0,18);
-	login_packet->unknown4[0] = 0x4c;
-	login_packet->unknown4[1] = 0x97;
-	login_packet->unknown4[2] = 0x49;
-	login_packet->unknown4[3] = 0x3b;
-	login_packet->unknown4[4] = 0x02;
-	login_packet->unknown4[5] = 0x0c;
-	login_packet->unknown4[6] = 0x80;
-	login_packet->unknown4[7] = 0x8f;
-	login_packet->unknown4[8] = 0xc2;
-	login_packet->unknown4[9] = 0x70;
+
+	/*Drcom5.2.0*/
+//	login_packet->unknown_m1[6];
+	login_packet->final_m1[0] = 0x02;
+	login_packet->final_m1[1] = 0x0c;
+
+//	login_packet->unknown_m1[4];
+	login_packet->final_m2[0] = 0x00;
+	login_packet->final_m2[1] = 0x00;
+	login_packet->final_m2[2] = 0xbc;
+	login_packet->final_m2[3] = 0x30;
+	login_packet->final_m2[4] = 0x5b;
+	login_packet->final_m2[5] = 0xbe;
+	login_packet->final_m2[6] = 0x43;
+	login_packet->final_m2[7] = 0xe2;
+	login_packet->final_m2[8] = 0x00;
+	login_packet->final_m2[9] = 0x00;
+//	login_packet->unknown_m3[2]
+
+
 /*
 	memcpy(login_packet->unknown4, d + 8, 8);
 */
@@ -183,7 +204,7 @@ try_it_again_1:
 	}
 
 	ret = _recv_dialog_packet(socks, &pkt, &pkt_size);
-	if (ret < 0 || pkt_size < sizeof(struct drcom_challenge)) {
+if (ret < 0 || pkt_size < sizeof(struct drcom_challenge)) {
 		if (pkt)
 			free(pkt);
 		report_daemon_msg(s2, "_recv_dialog_packet(PKT_CHALLENGE) failed\n");
@@ -193,9 +214,12 @@ try_it_again_1:
 	challenge = (struct drcom_challenge *)pkt;
 	if (challenge->serv_header.pkt_type != PKT_CHALLENGE) {
 		free(pkt);
-		report_daemon_msg(s2, "_recv_dialog_packet(PKT_CHALLENGE) returned non-challenge pkt\n");
+		report_daemon_msg(s2, "_recv_dialog_packet(PKT_CHALLENGE) returned non-challenge\n");
 		goto try_it_again_1;
 	}
+
+	g_challenge = challenge->challenge;
+
 
 	/* Now the _real_ ip address of the server is known */
 	info->servip = socks->servaddr_in.sin_addr.s_addr;

@@ -97,7 +97,12 @@ int _send_dialog_packet(struct drcom_socks *socks, void *buf, uint16_t type)
 		request->host_header.zero = 0;
 		request->host_header.len = 4;
 		request->host_header.checksum[0] = 1;
-
+/*
+		request->host_header.pkt_type = 0x0201;
+		request->host_header.zero = 0x69;
+		request->host_header.len = 0xab;
+		request->host_header.checksum[0] = 0x09;
+*/
 		buf = (void *) request;
 		loginfo("send: PKT_REQUEST\n");
 		break;
