@@ -51,6 +51,7 @@ struct drcom_host_msg
 	u_int8_t msgtype;
 	u_int8_t msg[19];
 	struct drcom_auth auth_info;
+	u_int8_t unknow_m[2];
 } __attribute__ ((__packed__));
 
 struct drcom_serv_msg
@@ -106,7 +107,13 @@ struct drcom_login_packet
 	u_int8_t unknown1;
 	u_int8_t unknown2;
 	u_int8_t unknown3[2];
-	u_int8_t unknown4[18];
+
+	u_int8_t unknown_m1[6];//Drcom5.2.0
+	u_int8_t final_m1[2];//Drcom5.2.0,0x02,0x0c
+	u_int8_t unknown_m2[4];//Drcom5.2.0
+	u_int8_t final_m2[10];//Drcom5.2.0
+	u_int8_t unknown_m3[2];//Drcom5.2.0
+
 } __attribute__ ((__packed__));
 
 struct drcom_logout_packet
